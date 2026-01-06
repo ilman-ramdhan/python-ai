@@ -51,7 +51,7 @@ ADMIN_IDS=your_telegram_user_id  # Optional
 
 ### 3. Run Bot
 ```bash
-python telegram_bot.py
+python main.py
 ```
 
 Bot is now running! 🎉
@@ -83,16 +83,14 @@ Bot is now running! 🎉
 
 ### Code Structure
 ```
-telegram_bot.py
-├── BotConfig (dataclass)       # Configuration management
-├── MessageTemplates (class)     # Centralized messages
-├── TelegramAIBot (class)        # Main bot logic
-│   ├── Persistence             # History save/load
-│   ├── Rate Limiting           # Anti-spam
-│   ├── AI Interaction          # Groq API
-│   ├── Command Handlers        # /start, /help, etc.
-│   └── Message Handlers        # Text & photo
-└── main()                       # Entry point
+main.py                          # Entry point
+└── bot/                         # Source code package
+    ├── config.py                # BotConfig & validation
+    ├── handlers.py              # Command & Message processors
+    ├── ai.py                    # Groq AI integration
+    ├── persistence.py           # JSON history management
+    ├── templates.py             # Message string templates
+    └── logger.py                # Logging configuration
 ```
 
 ### Key Features
@@ -108,15 +106,14 @@ telegram_bot.py
 
 ```
 python-ai/
-├── telegram_bot.py              # Main bot application
+├── main.py                      # Main entry point
+├── bot/                         # Source code package
 ├── .env                         # Configuration (DO NOT COMMIT!)
 ├── .env.example                 # Configuration template
 ├── .gitignore                   # Git exclusions
 ├── bot.log                      # Runtime logs (auto-generated)
 ├── conversation_history.json    # Chat history (auto-generated)
-├── README.md                    # This file
-├── PRODUCTION_FEATURES.md       # Production features documentation
-└── REFACTORING_SUMMARY.md       # Refactoring details
+└── README.md                    # This file
 ```
 
 ---
