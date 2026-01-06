@@ -1,6 +1,8 @@
 import logging
 import asyncio
 import time
+import base64
+from io import BytesIO
 from collections import defaultdict
 from typing import Dict, List, Any
 
@@ -26,7 +28,7 @@ class BotHandlers:
         self.config = config
         self.ai = ai_service
         self.persistence = persistence
-        self.conversation_history: Dict[int, List[Dict[str, str]]] = {}
+        self.conversation_history: Dict[int, List[Dict[str, Any]]] = {}
         
         # Rate limiting state
         self.user_last_request: Dict[int, float] = defaultdict(float)
@@ -117,6 +119,13 @@ class BotHandlers:
             "total_messages": sum(len(h) for h in self.conversation_history.values()),
             "active_chats": len([h for h in self.conversation_history.values() if h]),
         }
+    
+    async def _download_and_encode_image(self, photo_file) -> str:
+        """Download image and convert to base64"""
+        byte_stream = BytesIO()
+        await photo_file.download_to_memory(byte_stream)
+        byte_stream.seek(0)
+        return base64.b64encode(byte_stream.read()).decode('utf-8')
 
     # ========================================================================
     # COMMAND HANDLERS
@@ -221,12 +230,56 @@ class BotHandlers:
 
     async def handle_photo_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         message = update.message
-        if error := self.check_rate_limit(message.from_user.id):
+        user_id = message.from_user.id
+        chat_id = message.chat_id
+        caption = message.caption or "What can you see in this image?"
+
+        # Rate limit check
+        if error := self.check_rate_limit(user_id):
             await message.reply_text(error)
             return
 
+        # Group processing
         bot = await context.bot.get_me()
-        if self.is_group_chat(message.chat.type) and not await self.is_bot_mentioned(message, bot.username):
-             return
+        is_group = self.is_group_chat(message.chat.type)
+        if is_group:
+            if not await self.is_bot_mentioned(message, bot.username):
+                return
+            caption = self.remove_bot_mention(caption, bot.username)
 
-        await message.reply_text(MessageTemplates.PHOTO_NOT_SUPPORTED)
+        logger.info(f"[{'Group' if is_group else 'Private'}] Photo from {message.from_user.first_name}")
+        await message.reply_text("📷 Analyzing image...")
+
+        try:
+            # Get highest resolution photo
+            photo = message.photo[-1]
+            photo_file = await context.bot.get_file(photo.file_id)
+            
+            # Encode image
+            base64_image = await self._download_and_encode_image(photo_file)
+            
+            # Prepare payload for Vision Model
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": caption},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64_image}",
+                            },
+                        },
+                    ],
+                }
+            ]
+            
+            # Call AI with Vision Model
+            response = await self.ai.get_response(messages, model=self.config.vision_model)
+            
+            await message.reply_text(response)
+            logger.info("Vision response sent")
+
+        except Exception as e:
+            logger.error(f"Error handling photo: {e}", exc_info=True)
+            await message.reply_text(MessageTemplates.GENERAL_ERROR.format(error="Failed to analyze image."))
