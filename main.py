@@ -67,8 +67,8 @@ class BotConfig:
     max_requests_per_minute: int = 20
 
     # File paths
-    history_file: Path = Path("conversation_history.json")
-    log_file: Path = Path("bot.log")
+    history_file: Path = Path(__file__).parent / "conversation_history.json"
+    log_file: Path = Path(__file__).parent / "bot.log"
 
     @classmethod
     def from_env(cls) -> BotConfig:
