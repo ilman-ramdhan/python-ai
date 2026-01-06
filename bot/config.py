@@ -17,7 +17,7 @@ class BotConfig:
 
     # AI settings
     ai_model: str = "llama-3.3-70b-versatile"
-    vision_model: str = "llama-3.2-11b-vision-preview"
+    vision_model: str = "meta-llama/llama-4-scout-17b-16e-instruct"
     ai_temperature: float = 0.7
     max_history_messages: int = 20
 
