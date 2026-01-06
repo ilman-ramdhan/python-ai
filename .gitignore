@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 .htaccess
 tmp/*
+conversation_history.json
 
 # C extensions
 *.so
