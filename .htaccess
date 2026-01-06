@@ -1,0 +1,5 @@
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
+PassengerAppRoot "/home/undj7586/public_html/python-ai"
+PassengerBaseURI "/python-ai"
+PassengerPython "/home/undj7586/virtualenv/public_html/python-ai/3.13/bin/python"
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
