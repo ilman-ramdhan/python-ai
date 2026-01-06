@@ -1,7 +1,7 @@
 """
 Telegram AI Bot with Groq Integration
 
-Author: AI Development Team
+Author: Ilman M Ramdhan
 License: MIT
 """
 import logging

@@ -12,7 +12,8 @@ Enterprise-grade Telegram bot dengan Groq AI integration, built dengan Python be
 
 ### Core Features
 - 🤖 **AI Chat** - Powered by Groq Llama 3.3 70B
-- 💬 **Conversation History** - Persistent chat memory
+- �️ **Vision / Photo Analysis** - Can see and analyze images (Llama Vision)
+- �💬 **Conversation History** - Persistent chat memory
 - 👥 **Group Support** - Mention-only responses (no spam)
 - ⌨️ **Typing Indicator** - Natural chat experience
 - ⚡ **Fast & Free** - Groq API integration
@@ -29,7 +30,29 @@ Enterprise-grade Telegram bot dengan Groq AI integration, built dengan Python be
 
 ---
 
-## 🚀 Quick Start
+## � Prerequisites
+
+Before running the bot, you need to set up the necessary accounts and keys.
+
+### 1. Create a Telegram Bot
+1. Open Telegram and search for **[@BotFather](https://t.me/BotFather)**.
+2. Send the command `/newbot`.
+3. Follow the instructions to name your bot (e.g., "My AI Assistant") and give it a username (must end in `_bot`).
+4. **Copy the API Token** provided by BotFather. You will need this for the `TELEGRAM_BOT_TOKEN`.
+
+### 2. Get Groq API Key
+1. Sign up or Login at [Groq Console](https://console.groq.com/).
+2. Go to the API Keys section and create a new key.
+3. Copy the key. You will need this for the `GROQ_API_KEY`.
+
+### 3. Get Your Telegram ID (Optional)
+To use admin commands like `/stats`:
+1. Search for **[@userinfobot](https://t.me/userinfobot)** in Telegram.
+2. Start the bot to see your numeric User ID.
+
+---
+
+## �🚀 Quick Start
 
 ### 1. Install Dependencies
 ```bash
@@ -44,10 +67,7 @@ TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
 ADMIN_IDS=your_telegram_user_id  # Optional
 ```
 
-**Get API Keys:**
-- Groq API: https://console.groq.com/
-- Telegram Bot: Message [@BotFather](https://t.me/BotFather)
-- Your Telegram ID: Message [@userinfobot](https://t.me/userinfobot)
+
 
 ### 3. Run Bot
 ```bash
@@ -108,6 +128,7 @@ main.py                          # Entry point
 python-ai/
 ├── main.py                      # Main entry point
 ├── bot/                         # Source code package
+├── passenger_wsgi.py            # cPanel / Passenger entry point
 ├── .env                         # Configuration (DO NOT COMMIT!)
 ├── .env.example                 # Configuration template
 ├── .gitignore                   # Git exclusions
@@ -140,6 +161,7 @@ python-ai/
 
 ### Bot Settings (in code)
 - **AI Model**: `llama-3.3-70b-versatile`
+- **Vision Model**: `llama-4-scout-17b-16e-instruct`
 - **Temperature**: `0.7`
 - **Max History**: `20 messages`
 - **Rate Limit**: `3 seconds` between requests
@@ -256,10 +278,26 @@ MIT License - feel free to use and modify!
 ## 📞 Support
 
 Having issues? Check:
-1. `PRODUCTION_FEATURES.md` - Feature documentation
+1. `bot.log` - Error logs
 2. `bot.log` - Error logs
 3. Environment variables - Correct configuration
 
+
+
+## ❓ Troubleshooting
+
+### Bot not responding
+- Check if `TELEGRAM_BOT_TOKEN` is correct.
+- Check if the bot process is running (`python main.py`).
+- Check `bot.log` for errors.
+
+### "Rate limit exceeded"
+- You are sending messages too fast. Wait 3 seconds.
+
+### Vision not working (Analyzing image...)
+- Ensure your `GROQ_API_KEY` is valid.
+- Check if the model name in `config.py` is supported by Groq.
+
 ---
 
-**Made with 🤖 by AI** | Powered by Groq & Telegram
+**Made with 🤖 by [Ilman M Ramdhan](https://github.com/ilmanramdhan)** | Powered by Groq & Telegram
