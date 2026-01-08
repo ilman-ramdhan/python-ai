@@ -29,7 +29,7 @@ class BotConfig:
     max_history_messages: int = 20
 
     # Rate limiting
-    rate_limit_seconds: int = 3
+    rate_limit_seconds: int = 1
     max_requests_per_minute: int = 20
 
     # File paths

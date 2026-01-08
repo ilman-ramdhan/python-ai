@@ -32,6 +32,10 @@ class TelegramBot:
         self.ai = ai_service
         self.storage = storage
         
+        # Rate limiting
+        self.user_last_request: Dict[int, float] = defaultdict(float)
+        self.user_request_count: Dict[int, List[float]] = defaultdict(list)
+        
     async def initialize(self):
         """Async initialization"""
         # self.conversation_history is removed in favor of fetching on demand from DB
@@ -216,9 +220,27 @@ class TelegramBot:
         # Call AI
         json_response = await self.ai.get_response(messages, model=model)
         
-        # Clean and Parse
-        cleaned_json = re.sub(r'```json\s*|\s*```', '', json_response).strip()
-        return json.loads(cleaned_json)
+        # Robust JSON Extraction
+        try:
+            # 1. Try to find code block
+            match = re.search(r'```json\s*(.*?)\s*```', json_response, re.DOTALL)
+            if match:
+                json_str = match.group(1)
+            else:
+                # 2. Try to find substring starting with { and ending with }
+                # This helps if the model returns text before/after without markdown blocks
+                json_match = re.search(r'(\{.*\})', json_response, re.DOTALL)
+                if json_match:
+                    json_str = json_match.group(1)
+                else:
+                    # 3. Fallback: try raw string, might be pure JSON
+                    json_str = json_response
+
+            return json.loads(json_str)
+
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse JSON from AI: {json_response}")
+            raise
 
     async def cmd_excel(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle /excel command to generate Excel files from Text OR Images"""
@@ -362,6 +384,12 @@ class TelegramBot:
         user_id = message.from_user.id
         chat_id = message.chat_id
         caption = message.caption or "What can you see in this image?"
+
+        # Ignore if this is a command (handled by CommandHandler) or delegate if needed
+        # Fix: Check this BEFORE rate limit to avoid double counting if we delegate to cmd_excel
+        if caption and caption.startswith("/excel"):
+             await self.cmd_excel(update, context)
+             return
 
         # Rate limit check
         if error := self.check_rate_limit(user_id):
