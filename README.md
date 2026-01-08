@@ -22,7 +22,7 @@ Enterprise-grade Telegram bot powered by **Groq AI (Llama 3)**, featuring **Exce
 
 ### 🛡️ Production Ready
 - **Rate Limiting**: Protects against spam (Token bucket algorithm).
-- **Persistence**: Auto-saves chat history to JSON.
+- **Persistence**: Auto-saves chat history to **MySQL Database** (Async).
 - **Microservices Architecture**: Cleanly separated services for AI, Storage, and Utilities.
 - **Async/Await**: Non-blocking I/O for high performance.
 
