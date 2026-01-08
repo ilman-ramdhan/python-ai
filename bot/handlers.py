@@ -9,34 +9,33 @@ from typing import Dict, List, Any
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from .config import BotConfig
-from .templates import MessageTemplates
-from .ai import AIService
-from .persistence import PersistenceManager
+from .core.config import BotConfig
+from .resources.templates import MessageTemplates
+from .services.ai_service import AIService
+from .services.storage_service import StorageService
+from .services.excel_service import ExcelService
+import json
+import re
 
 logger = logging.getLogger("bot.handlers")
 
-class BotHandlers:
+class TelegramBot:
     """Class enabling the handling of bot commands and messages"""
 
     def __init__(
         self,
         config: BotConfig,
         ai_service: AIService,
-        persistence: PersistenceManager,
+        storage: StorageService,
     ):
         self.config = config
         self.ai = ai_service
-        self.persistence = persistence
-        self.conversation_history: Dict[int, List[Dict[str, Any]]] = {}
+        self.storage = storage
         
-        # Rate limiting state
-        self.user_last_request: Dict[int, float] = defaultdict(float)
-        self.user_request_count: Dict[int, List[float]] = defaultdict(list)
-
     async def initialize(self):
         """Async initialization"""
-        self.conversation_history = await self.persistence.load_history()
+        # self.conversation_history is removed in favor of fetching on demand from DB
+        # self.conversation_history = await self.storage.load_history() # No longer loading all history into memory
 
     # ========================================================================
     # RATE LIMITING
@@ -74,18 +73,9 @@ class BotHandlers:
 
     async def _update_history(self, chat_id: int, user_msg: str, ai_msg: str):
         """Update and save conversation history"""
-        if chat_id not in self.conversation_history:
-            self.conversation_history[chat_id] = []
-
-        history = self.conversation_history[chat_id]
-        history.append({"role": "user", "content": user_msg})
-        history.append({"role": "assistant", "content": ai_msg})
-
-        # Trim history
-        if len(history) > self.config.max_history_messages:
-            self.conversation_history[chat_id] = history[-self.config.max_history_messages:]
-
-        await self.persistence.save_history(self.conversation_history)
+        # Save individually
+        await self.storage.save_message(chat_id, "user", user_msg)
+        await self.storage.save_message(chat_id, "assistant", ai_msg)
 
     # ========================================================================
     # UTILITIES
@@ -114,10 +104,12 @@ class BotHandlers:
 
     def get_stats(self) -> Dict[str, Any]:
         """Get bot statistics"""
+        # Stats are harder with direct DB access without counting queries. 
+        # For now, return placeholders or implement count queries in persistence.
         return {
-            "total_chats": len(self.conversation_history),
-            "total_messages": sum(len(h) for h in self.conversation_history.values()),
-            "active_chats": len([h for h in self.conversation_history.values() if h]),
+            "total_chats": "N/A (DB)",
+            "total_messages": "N/A (DB)", 
+            "active_chats": "N/A (DB)",
         }
     
     async def _download_and_encode_image(self, photo_file) -> str:
@@ -143,9 +135,7 @@ class BotHandlers:
 
     async def cmd_clear(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         chat_id = update.message.chat_id
-        if chat_id in self.conversation_history:
-            self.conversation_history[chat_id] = []
-            await self.persistence.save_history(self.conversation_history)
+        await self.storage.clear_history(chat_id)
         await update.message.reply_text(MessageTemplates.HISTORY_CLEARED)
         logger.info(f"/clear by user {update.message.from_user.id}")
 
@@ -168,6 +158,144 @@ class BotHandlers:
 
         await update.message.reply_text(message, parse_mode="Markdown")
         logger.info(f"/stats by admin {user_id}")
+
+
+
+    async def _get_excel_data_from_ai(self, prompt: str, image_base64: str = None) -> Dict[str, Any]:
+        """Get structured Excel data from AI (Text or Vision)"""
+        
+        system_instruction = (
+            "You are a data extraction assistant. "
+            "Generate a valid JSON object representing an Excel file based on the user request. "
+            "The JSON MUST follow this exact schema:\n"
+            "{\n"
+            "  \"filename\": \"string (ending in .xlsx)\",\n"
+            "  \"sheets\": [\n"
+            "    {\n"
+            "      \"name\": \"string (sheet name)\",\n"
+            "      \"headers\": [\"string\", \"string\"],\n"
+            "      \"rows\": [[\"value\", \"value\"], [\"value\", \"value\"]]\n"
+            "    }\n"
+            "  ]\n"
+            "}\n"
+            "IMPORTANT: Return ONLY the raw JSON string. Do not use markdown code blocks (```json). "
+            "Do not add any explanation."
+        )
+
+        messages = []
+        model = self.config.ai_model
+
+        if image_base64:
+            # Vision Request
+            model = self.config.vision_model
+            messages = [
+                {
+                    "role": "system", 
+                    "content": system_instruction
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_base64}",
+                            },
+                        },
+                    ],
+                }
+            ]
+        else:
+            # Text Request
+            messages = [
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": prompt}
+            ]
+
+        # Call AI
+        json_response = await self.ai.get_response(messages, model=model)
+        
+        # Clean and Parse
+        cleaned_json = re.sub(r'```json\s*|\s*```', '', json_response).strip()
+        return json.loads(cleaned_json)
+
+    async def cmd_excel(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /excel command to generate Excel files from Text OR Images"""
+        user_id = update.message.from_user.id
+        message = update.message
+        
+        # 1. Determine Input Source (Text vs Image)
+        prompt = ""
+        image_file = None
+        
+        # Check args for prompt
+        if context.args:
+            prompt = " ".join(context.args)
+        
+        # Check for image in current message (Caption command)
+        if message.photo:
+            image_file = await context.bot.get_file(message.photo[-1].file_id)
+            if not prompt:
+                prompt = message.caption or "Extract data from this image to Excel"
+        
+        # Check for reply to image
+        elif message.reply_to_message and message.reply_to_message.photo:
+            image_file = await context.bot.get_file(message.reply_to_message.photo[-1].file_id)
+            if not prompt:
+                prompt = "Extract data from this image to Excel"
+                if message.text:
+                     prompt += f". Context: {message.text}"
+
+        # Fallback for Reply to Text
+        elif message.reply_to_message and message.reply_to_message.text:
+             if not prompt:
+                 prompt = message.reply_to_message.text
+        
+        # Validation
+        if not prompt and not image_file:
+            await update.message.reply_text(
+                "⚠️ Please provide a description, upload a photo with caption, or reply to a message.\n"
+                "Example: `/excel List of top 10 programming languages`",
+                parse_mode="Markdown"
+            )
+            return
+
+        # Rate limit
+        if error := self.check_rate_limit(user_id):
+            await update.message.reply_text(error)
+            return
+
+        status_msg = await update.message.reply_text("📊 Analyzing request & generating Excel...")
+        logger.info(f"/excel by user {user_id}. Has Image: {bool(image_file)}")
+
+        try:
+            # 2. Process Image if exists
+            image_base64 = None
+            if image_file:
+                image_base64 = await self._download_and_encode_image(image_file)
+
+            # 3. Get Structured Data
+            data = await self._get_excel_data_from_ai(prompt, image_base64)
+
+            # 4. Generate Excel
+            excel_file, filename = ExcelService.generate(data)
+
+            # 5. Send File
+            await update.message.reply_document(
+                document=excel_file,
+                filename=filename,
+                caption=f"✅ Excel generated from {'📷 Image' if image_file else '📝 Text'}"
+            )
+            
+            # Cleanup status message (optional, usually better to leave or delete)
+            # await status_msg.delete() 
+
+        except json.JSONDecodeError:
+            await update.message.reply_text("❌ AI output invalid JSON. Please try again with a clearer prompt.")
+        except Exception as e:
+            logger.error(f"Error generating excel: {e}", exc_info=True)
+            await update.message.reply_text(MessageTemplates.GENERAL_ERROR.format(error="Failed to generate Excel file."))
 
     # ========================================================================
     # MESSAGE HANDLERS
@@ -208,8 +336,9 @@ class BotHandlers:
 
         try:
             # Prepare messages
-            current_history = self.conversation_history.get(chat_id, []).copy()
-            messages = current_history + [{"role": "user", "content": user_message}]
+            # Prepare messages (fetch context from DB)
+            recent_context = await self.storage.get_chat_history(chat_id, limit=self.config.max_history_messages)
+            messages = recent_context + [{"role": "user", "content": user_message}]
             
             # Get AI Response
             ai_reply = await self.ai.get_response(messages)
@@ -248,6 +377,10 @@ class BotHandlers:
             caption = self.remove_bot_mention(caption, bot.username)
 
         logger.info(f"[{'Group' if is_group else 'Private'}] Photo from {message.from_user.first_name}")
+        # Only analyze if validation passes (e.g. not a command)
+        # Commands in captions are handled by CommandHandler, but we should ensure we don't double process if needed.
+        # However, CommandHandler usually stops propagation.
+        
         await message.reply_text("📷 Analyzing image...")
 
         try:

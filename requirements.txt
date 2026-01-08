@@ -2,3 +2,8 @@ groq
 python-telegram-bot
 python-dotenv
 tenacity
+openpyxl
+pytest
+pytest-asyncio
+aiomysql
+cryptography

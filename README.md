@@ -1,6 +1,6 @@
 # 🤖 Telegram AI Bot
 
-Enterprise-grade Telegram bot dengan Groq AI integration, built dengan Python best practices.
+Enterprise-grade Telegram bot powered by **Groq AI (Llama 3)**, featuring **Excel Generation**, **Vision Analysis**, and a scalable **Microservices Architecture**.
 
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
 [![Groq](https://img.shields.io/badge/AI-Groq-orange.svg)](https://groq.com/)
@@ -8,296 +8,123 @@ Enterprise-grade Telegram bot dengan Groq AI integration, built dengan Python be
 
 ---
 
-## ✨ Features
+## ✨ Key Features
 
-### Core Features
-- 🤖 **AI Chat** - Powered by Groq Llama 3.3 70B
-- �️ **Vision / Photo Analysis** - Can see and analyze images (Llama Vision)
-- �💬 **Conversation History** - Persistent chat memory
-- 👥 **Group Support** - Mention-only responses (no spam)
-- ⌨️ **Typing Indicator** - Natural chat experience
-- ⚡ **Fast & Free** - Groq API integration
+### 🧠 Advanced AI
+- **Chat**: Powered by `llama-3.3-70b` for natural, intelligent conversations.
+- **Vision**: Uses `llama-3.2-11b-vision` to analyze photos (e.g., "What's in this image?").
+- **Context Aware**: Remembers conversation history (configurable depth).
 
-### Production Features
-- 📝 **Logging System** - File & console logging
-- ⏱️ **Rate Limiting** - Anti-spam protection (3s cooldown + 20 req/min)
-- 💾 **Persistent Storage** - JSON-based history (survives restarts)
-- ✅ **Config Validation** - Environment variable checking
-- 🔄 **Error Recovery** - Auto-retry with exponential backoff
-- 👨‍💼 **Admin Commands** - Statistics & monitoring
-- 💬 **User-Friendly Errors** - Specific error messages
-- 🏗️ **OOP Architecture** - Clean, maintainable code
+### 📊 Excel Generation (New!)
+- **Text to Excel**: `/excel Make a list of top 5 laptops with prices` -> Generates `.xlsx`.
+- **Image to Excel**: Upload a photo of a table -> `/excel` -> Extracts data to `.xlsx`.
+- **Auto-Formatting**: Auto-adjusts column widths and bold headers.
+
+### 🛡️ Production Ready
+- **Rate Limiting**: Protects against spam (Token bucket algorithm).
+- **Persistence**: Auto-saves chat history to JSON.
+- **Microservices Architecture**: Cleanly separated services for AI, Storage, and Utilities.
+- **Async/Await**: Non-blocking I/O for high performance.
 
 ---
 
-## � Prerequisites
+## 🛠️ Installation
 
-Before running the bot, you need to set up the necessary accounts and keys.
+### 1. Requirements
+- Python 3.9+
+- Telegram Bot Token ([@BotFather](https://t.me/BotFather))
+- Groq API Key ([console.groq.com](https://console.groq.com))
 
-### 1. Create a Telegram Bot
-1. Open Telegram and search for **[@BotFather](https://t.me/BotFather)**.
-2. Send the command `/newbot`.
-3. Follow the instructions to name your bot (e.g., "My AI Assistant") and give it a username (must end in `_bot`).
-4. **Copy the API Token** provided by BotFather. You will need this for the `TELEGRAM_BOT_TOKEN`.
-
-### 2. Get Groq API Key
-1. Sign up or Login at [Groq Console](https://console.groq.com/).
-2. Go to the API Keys section and create a new key.
-3. Copy the key. You will need this for the `GROQ_API_KEY`.
-
-### 3. Get Your Telegram ID (Optional)
-To use admin commands like `/stats`:
-1. Search for **[@userinfobot](https://t.me/userinfobot)** in Telegram.
-2. Start the bot to see your numeric User ID.
-
----
-
-## �🚀 Quick Start
-
-### 1. Install Dependencies
+### 2. Setup
 ```bash
-pip install groq python-telegram-bot python-dotenv tenacity
+# Clone repository
+git clone https://github.com/ilmanramdhan/python-ai.git
+cd python-ai
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-### 2. Configuration
-Create `.env` file:
+### 3. Configuration
+Create a `.env` file in the root directory:
 ```env
+TELEGRAM_BOT_TOKEN=your_bot_token_here
 GROQ_API_KEY=your_groq_api_key_here
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
-ADMIN_IDS=your_telegram_user_id  # Optional
+ADMIN_IDS=123456789,987654321
 ```
 
-
-
-### 3. Run Bot
+### 4. Run
 ```bash
 python main.py
 ```
 
-Bot is now running! 🎉
+---
+
+## 📖 Usage Guide
+
+### 💬 Chat
+Just send a message!
+> **User**: "Jelaskan tentang Python dalam 1 kalimat"
+> **Bot**: "Python adalah bahasa pemrograman serbaguna yang mudah dibaca dan populer untuk pengembangan web, data science, dan AI."
+
+### 📊 Excel Generation
+**Method 1: From Text**
+> `/excel Buatkan tabel jadwal belajar mingguan untuk programmer`
+
+**Method 2: From Image (OCR/Vision)**
+1. Upload a photo of a document/table.
+2. Caption it with `/excel` (or reply to it with `/excel`).
+3. Bot will analyze the image and send back an `.xlsx` file.
+
+### 📷 Vision Analysis
+Send any photo.
+> **User**: [Sends Photo] "Where is this?"
+> **Bot**: "Based on the landmarks, this appears to be..."
+
+### 🛠️ Commands
+- `/start` - Check bot status.
+- `/clear` - clear conversation memory.
+- `/stats` - View bot statistics (Admin only).
+- `/excel` - Generate Excel files.
 
 ---
 
-## 💬 Usage
+## 🏗️ Project Structure
 
-### Private Chat
-1. Open bot in Telegram
-2. Send message: `"Hello!"`
-3. Bot responds instantly
+Refactored to follow **Clean Architecture** principles:
 
-### Group Chat
-1. Add bot to your group
-2. Mention bot: `@botname what is AI?`
-3. Or reply to bot's message
-4. Bot only responds when mentioned (no spam!)
-
-### Commands
-- `/start` - Bot information
-- `/help` - Usage guide
-- `/clear` - Reset conversation history
-- `/stats` - Bot statistics (admin only)
-
----
-
-## 🏗️ Architecture
-
-### Code Structure
-```
-main.py                          # Entry point
-└── bot/                         # Source code package
-    ├── config.py                # BotConfig & validation
-    ├── handlers.py              # Command & Message processors
-    ├── ai.py                    # Groq AI integration
-    ├── persistence.py           # JSON history management
-    ├── templates.py             # Message string templates
-    └── logger.py                # Logging configuration
-```
-
-### Key Features
-- **Type Hints** - Full typing for IDE support
-- **Error Handling** - Comprehensive try-catch with specific messages
-- **Async/Await** - Non-blocking architecture
-- **Retry Logic** - Tenacity-based error recovery
-- **PEP 8 Compliant** - Clean, readable code
-
----
-
-## 📁 Project Files
-
-```
+```text
 python-ai/
-├── main.py                      # Main entry point
-├── bot/                         # Source code package
-├── passenger_wsgi.py            # cPanel / Passenger entry point
-├── .env                         # Configuration (DO NOT COMMIT!)
-├── .env.example                 # Configuration template
-├── .gitignore                   # Git exclusions
-├── bot.log                      # Runtime logs (auto-generated)
-├── conversation_history.json    # Chat history (auto-generated)
-└── README.md                    # This file
+├── main.py                  # Entry point
+├── bot/
+│   ├── core/                # Core infrastructure
+│   │   ├── config.py        # Settings & Validation
+│   │   └── logger.py        # Centralized logging
+│   │
+│   ├── services/            # Business Logic Layer
+│   │   ├── ai_service.py    # Groq API wrapper
+│   │   ├── excel_service.py # OpenPYXL generation logic
+│   │   └── storage_service.py # Persistence manager
+│   │
+│   ├── resources/           # Static Assets
+│   │   └── templates.py     # Message strings
+│   │
+│   └── handlers.py          # Telegram Event Controllers
+│
+├── tests/                   # Verification Scripts
+└── conversation_history.json # Data storage
 ```
-
----
-
-## 🎯 Use Cases
-
-- 💻 **Coding Help** - Debugging, code review, explanations
-- 📝 **Writing** - Content creation, translation, proofreading
-- 🧮 **Calculations** - Math, finance, data analysis
-- 🎓 **Learning** - Explain concepts, tutorials, Q&A
-- 💡 **Brainstorming** - Ideas, planning, problem-solving
-- 🗣️ **General Chat** - Conversations, advice, entertainment
-
----
-
-## 🔧 Configuration Options
-
-### Environment Variables
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `GROQ_API_KEY` | ✅ | Groq API key for AI |
-| `TELEGRAM_BOT_TOKEN` | ✅ | Telegram bot token |
-| `ADMIN_IDS` | ❌ | Comma-separated admin user IDs |
-
-### Bot Settings (in code)
-- **AI Model**: `llama-3.3-70b-versatile`
-- **Vision Model**: `llama-4-scout-17b-16e-instruct`
-- **Temperature**: `0.7`
-- **Max History**: `20 messages`
-- **Rate Limit**: `3 seconds` between requests
-- **Max Requests**: `20` per minute per user
-
----
-
-## 📊 Technical Details
-
-### Technologies
-- **Python** 3.9+
-- **python-telegram-bot** - Telegram API wrapper
-- **Groq** - AI API client
-- **Tenacity** - Retry logic
-- **Asyncio** - Async architecture
-
-### Error Handling
-- Network errors → Auto-retry with backoff
-- Rate limits → User-friendly wait messages
-- API errors → Specific error descriptions
-- Timeouts → Graceful fallback
-
-### Rate Limiting
-- **Per-request**: 3 second cooldown
-- **Per-minute**: Max 20 requests
-- **Prevents**: Spam & API abuse
-
-### Data Persistence
-- **Format**: JSON
-- **Location**: `conversation_history.json`
-- **Auto-save**: After each message
-- **Max size**: 20 messages per chat
-
----
-
-## 🧪 Development
-
-### Best Practices Applied
-- ✅ Object-Oriented Design
-- ✅ Dataclass Configuration
-- ✅ Comprehensive Type Hints
-- ✅ Centralized Message Templates
-- ✅ Separation of Concerns
-- ✅ Private/Public Method Distinction
-- ✅ Comprehensive Docstrings
-- ✅ PEP 8 Compliance
-
-### Testing Ready
-```python
-# Easy to test
-config = BotConfig(bot_token="test", groq_api_key="test")
-bot = TelegramAIBot(config)
-
-# Mock dependencies
-bot.groq_client = MockGroqClient()
-response = bot.ask_ai("test", 123)
-```
-
----
-
-## 📝 Logging
-
-Logs are written to:
-- **File**: `bot.log`
-- **Console**: Real-time output
-
-Log entries include:
-- Timestamps
-- User interactions
-- AI responses
-- Errors & warnings
-- Admin actions
-
----
-
-## 🔒 Security
-
-- ✅ Environment variables (no hardcoded keys)
-- ✅ `.gitignore` configured
-- ✅ Rate limiting protection
-- ✅ Admin-only commands
-- ✅ Input validation
-
-**Important**: Never commit `.env` file!
 
 ---
 
 ## 🤝 Contributing
-
-Contributions welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Follow PEP 8 guidelines
-4. Add type hints
-5. Update documentation
-6. Submit pull request
+1. Fork the repo.
+2. Create feature branch: `git checkout -b feature/cool-feature`.
+3. Commit changes: `git commit -m 'Add cool feature'`.
+4. Push to branch: `git push origin feature/cool-feature`.
+5. Submit a Pull Request.
 
 ---
 
 ## 📄 License
-
-MIT License - feel free to use and modify!
-
----
-
-## 🙏 Credits
-
-- **AI**: [Groq](https://groq.com/) (Llama 3.3 70B)
-- **Framework**: [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot)
-- **Built with**: Python & Love ❤️
-
----
-
-## 📞 Support
-
-Having issues? Check:
-1. `bot.log` - Error logs
-2. `bot.log` - Error logs
-3. Environment variables - Correct configuration
-
-
-
-## ❓ Troubleshooting
-
-### Bot not responding
-- Check if `TELEGRAM_BOT_TOKEN` is correct.
-- Check if the bot process is running (`python main.py`).
-- Check `bot.log` for errors.
-
-### "Rate limit exceeded"
-- You are sending messages too fast. Wait 3 seconds.
-
-### Vision not working (Analyzing image...)
-- Ensure your `GROQ_API_KEY` is valid.
-- Check if the model name in `config.py` is supported by Groq.
-
----
-
-**Made with 🤖 by [Ilman M Ramdhan](https://github.com/ilmanramdhan)** | Powered by Groq & Telegram
+MIT License. Created by [Ilman M Ramdhan](https://github.com/ilmanramdhan).

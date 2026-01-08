@@ -13,11 +13,11 @@ from telegram.ext import (
     filters,
 )
 
-from bot.config import BotConfig
-from bot.logger import setup_logging
-from bot.persistence import PersistenceManager
-from bot.ai import AIService
-from bot.handlers import BotHandlers
+from bot.core.config import BotConfig
+from bot.core.logger import setup_logging
+from bot.services.storage_service import StorageService
+from bot.services.ai_service import AIService
+from bot.handlers import TelegramBot
 
 def main() -> None:
     """Main entry point"""
@@ -31,30 +31,32 @@ def main() -> None:
         logger.info("Bot starting...")
 
         # 3. Initialize Services
-        persistence = PersistenceManager(config.history_file)
+        storage = StorageService(config)
         ai_service = AIService(config)
         
         # 4. Initialize Handlers
-        handlers = BotHandlers(config, ai_service, persistence)
+        bot_app = TelegramBot(config, ai_service, storage)
 
         # 6. Register Handlers
         async def post_init(application: Application) -> None:
-            await handlers.initialize()
-            logger.info("Handlers initialized")
+            await storage.initialize()
+            # await bot_app.initialize() # No longer needed for handlers to load history
+            logger.info("Services & Handlers initialized")
 
         # 5. Build Application
         app = Application.builder().token(config.bot_token).post_init(post_init).build()
 
         # Commands
-        app.add_handler(CommandHandler("start", handlers.cmd_start))
-        app.add_handler(CommandHandler("help", handlers.cmd_help))
-        app.add_handler(CommandHandler("clear", handlers.cmd_clear))
-        app.add_handler(CommandHandler("stats", handlers.cmd_stats))
+        app.add_handler(CommandHandler("start", bot_app.cmd_start))
+        app.add_handler(CommandHandler("help", bot_app.cmd_help))
+        app.add_handler(CommandHandler("clear", bot_app.cmd_clear))
+        app.add_handler(CommandHandler("stats", bot_app.cmd_stats))
+        app.add_handler(CommandHandler("excel", bot_app.cmd_excel))
 
         # Messages
-        app.add_handler(MessageHandler(filters.PHOTO, handlers.handle_photo_message))
+        app.add_handler(MessageHandler(filters.PHOTO, bot_app.handle_photo_message))
         app.add_handler(
-            MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.handle_text_message)
+            MessageHandler(filters.TEXT & ~filters.COMMAND, bot_app.handle_text_message)
         )
 
         # Print startup info

@@ -6,7 +6,7 @@ from tenacity import (
     retry_if_exception_type,
 )
 from groq import AsyncGroq
-from .config import BotConfig
+from ..core.config import BotConfig
 
 class AIService:
     """Async AI ServiceWrapper"""
